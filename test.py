@@ -1,30 +1,19 @@
+import errno
+import logging
 import os
+import re
 import socket
 import sys
 import threading
-import termios
-import tty
-import re
 
-from termcast_client import pity
+import pity
+from termhelpers import Cbreak
 
+logging.basicConfig(filename='debug.log', level=logging.DEBUG)
 
 if sys.version_info.major == 2:
     input = raw_input
     ConnectionRefusedError = socket.error
-
-
-class Cbreak(object):
-
-    def __init__(self, stream):
-        self.stream = stream
-
-    def __enter__(self):
-        self.original_stty = termios.tcgetattr(self.stream)
-        tty.setcbreak(self.stream, termios.TCSANOW)
-
-    def __exit__(self, *args):
-        termios.tcsetattr(self.stream, termios.TCSANOW, self.original_stty)
 
 
 def get_cursor_position(to_terminal, from_terminal):
@@ -73,6 +62,11 @@ def connect_and_wait_for_close():
     s.connect(('localhost', 1234))
     b'done' == s.recv(1024)
     assert b'' == s.recv(1024)
+    logger.debug('connected')
+    b'done' == s.recv(4)
+    logger.debug('received done string')
+    assert b'' == s.recv(1024)
+    logger.debug('received empty string')
 
 
 def set_up_listener():
@@ -80,8 +74,11 @@ def set_up_listener():
         while True:
             conn, addr = sock.accept()
             lines_available, _ = get_cursor_position(sys.stdout, sys.stdin)
+            logger.debug('handler done running')
             conn.send(b'done')
+            logger.debug('data sent from server side')
             conn.close()
+            logger.debug('socket closed on server side')
 
     sock = socket.socket()
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -94,16 +91,24 @@ def set_up_listener():
 
 
 def master_read(fd):
-    data = os.read(fd, 1024)
+    data = os.read(fd, 1)
+    logger.debug("read byte %r written to master device" % (data, ))
     return data
-
 
 if __name__ == '__main__':
     if sys.argv[1] == 'inner':
+        logger = logging.getLogger('inner')
+        logger.debug('\n\nnew session')
         while True:
-            input('>>> ')
+            logger.debug('about to write prompt')
+            sys.stderr.write('>>> ')
+            sys.stderr.flush()
+            logger.debug('just wrote prompt')
+            input()
+            logger.debug('got input')
             connect_and_wait_for_close()
     elif sys.argv[1] == 'outer':
+        logger = logging.getLogger('outer')
         set_up_listener()
         pity.spawn(['python', 'test.py', 'inner'],
                    master_read=master_read,

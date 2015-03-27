@@ -70,11 +70,18 @@ def _copy(master_fd, master_read=pty._read, stdin_read=pty._read):
                 os.write(STDOUT_FILENO, data)
         if STDIN_FILENO in rfds:
             logging.debug('stdin is ready, dealing...')
-            data = stdin_read(STDIN_FILENO)
-            if not data:
-                fds.remove(STDIN_FILENO)
-            else:
-                pty._writen(master_fd, data)
+
+            with Nonblocking(STDIN_FILENO):
+                try:
+                    data = stdin_read(STDIN_FILENO)
+                except OSError as e:
+                    if e[0] != errno.EAGAIN:
+                        raise
+                else:
+                    if not data:
+                        fds.remove(STDIN_FILENO)
+                    else:
+                        pty._writen(master_fd, data)
             logging.debug('done dealing with stdin')
 
 def spawn(argv, master_read=pty._read, stdin_read=pty._read, handle_window_size=False):
