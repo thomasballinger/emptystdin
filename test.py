@@ -71,11 +71,8 @@ def _inner_get_cursor_position(to_terminal, from_terminal):
 def connect_and_wait_for_close():
     s = socket.socket()
     s.connect(('localhost', 1234))
-    print 'connected'
     b'done' == s.recv(1024)
-    print 'received done string'
     assert b'' == s.recv(1024)
-    print 'received empty string'
 
 
 def set_up_listener():
@@ -83,10 +80,8 @@ def set_up_listener():
         while True:
             conn, addr = sock.accept()
             lines_available, _ = get_cursor_position(sys.stdout, sys.stdin)
-            print 'handler done running'
             conn.send(b'done')
             conn.close()
-            print 'socket closed on server side'
 
     sock = socket.socket()
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

@@ -54,21 +54,28 @@ def _copy(master_fd, master_read=pty._read, stdin_read=pty._read):
     Copies
             pty master -> standard output   (master_read)
             standard input -> pty master    (stdin_read)"""
+    logging.debug('starting _copy loop')
     fds = [master_fd, STDIN_FILENO]
     while True:
+        logging.debug('calling select in copy')
         rfds, wfds, xfds = select.select(fds, [], [])
+        logging.debug('select call in copy finished! %r %r %r' % (rfds, wfds, xfds, ))
         if master_fd in rfds:
+            logging.debug('master_fd is ready, so calling read')
             data = master_read(master_fd)
+            logging.debug('master_fd master_read call done, got data: %r' % (data, ))
             if not data:  # Reached EOF.
                 fds.remove(master_fd)
             else:
                 os.write(STDOUT_FILENO, data)
         if STDIN_FILENO in rfds:
+            logging.debug('stdin is ready, dealing...')
             data = stdin_read(STDIN_FILENO)
             if not data:
                 fds.remove(STDIN_FILENO)
             else:
                 pty._writen(master_fd, data)
+            logging.debug('done dealing with stdin')
 
 def spawn(argv, master_read=pty._read, stdin_read=pty._read, handle_window_size=False):
     # copied from pty.py, with modifications
