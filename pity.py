@@ -9,6 +9,7 @@ import termios
 import tty
 import logging
 logging.basicConfig(filename='debug.log', level=logging.DEBUG)
+from termhelpers import Nonblocking
 
 CHILD = pty.CHILD
 STDIN_FILENO = pty.STDIN_FILENO
@@ -48,6 +49,27 @@ def fork(handle_window_size=False):
 def openpty():
     return pty.openpty()
 
+def _copy(master_fd, master_read=pty._read, stdin_read=pty._read):
+    """Parent copy loop.
+    Copies
+            pty master -> standard output   (master_read)
+            standard input -> pty master    (stdin_read)"""
+    fds = [master_fd, STDIN_FILENO]
+    while True:
+        rfds, wfds, xfds = select.select(fds, [], [])
+        if master_fd in rfds:
+            data = master_read(master_fd)
+            if not data:  # Reached EOF.
+                fds.remove(master_fd)
+            else:
+                os.write(STDOUT_FILENO, data)
+        if STDIN_FILENO in rfds:
+            data = stdin_read(STDIN_FILENO)
+            if not data:
+                fds.remove(STDIN_FILENO)
+            else:
+                pty._writen(master_fd, data)
+
 def spawn(argv, master_read=pty._read, stdin_read=pty._read, handle_window_size=False):
     # copied from pty.py, with modifications
     # note that it references a few private functions - would be nice to not
@@ -72,7 +94,7 @@ def spawn(argv, master_read=pty._read, stdin_read=pty._read, handle_window_size=
 
     while True:
         try:
-            pty._copy(master_fd, master_read, stdin_read)
+            _copy(master_fd, master_read, stdin_read)
         except OSError as e:
             if e.errno == errno.EINTR:
                 continue
