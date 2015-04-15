@@ -2,9 +2,10 @@ import re
 import socket
 import sys
 import threading
+import termios
+import tty
 
 import pexpect
-from termhelpers import Cbreak
 
 if sys.version_info.major == 2:
     input = raw_input
@@ -12,7 +13,9 @@ if sys.version_info.major == 2:
 
 
 def get_cursor_position(to_terminal, from_terminal):
-    with Cbreak(from_terminal):
+    original_stty = termios.tcgetattr(from_terminal)
+    tty.setcbreak(from_terminal, termios.TCSANOW)
+    try:
         query_cursor_position = u"\x1b[6n"
         to_terminal.write(query_cursor_position)
         to_terminal.flush()
@@ -35,6 +38,8 @@ def get_cursor_position(to_terminal, from_terminal):
                 extra = m.groupdict()['extra']
                 assert not extra
                 return (row - 1, col - 1)
+    finally:
+        termios.tcsetattr(from_terminal, termios.TCSANOW, original_stty)
 
 
 def set_up_listener():
