@@ -20,14 +20,9 @@ def get_cursor_position(to_terminal, from_terminal):
         to_terminal.write(query_cursor_position)
         to_terminal.flush()
 
-        def retrying_read():
-            while True:
-                c = from_terminal.read(1)
-                return c
-
         resp = ''
         while True:
-            c = retrying_read()
+            c = from_terminal.read(1)
             resp += c
             m = re.search('(?P<extra>.*)'
                           '(?P<CSI>\x1b\[|\x9b)'
@@ -43,7 +38,7 @@ def get_cursor_position(to_terminal, from_terminal):
 
 
 def set_up_listener():
-    def forever():
+    def get_cursor_on_connect():
         conn, addr = sock.accept()
         get_cursor_position(sys.stdout, sys.stdin)
         conn.send(b'done')
@@ -53,22 +48,22 @@ def set_up_listener():
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind(('localhost', 1234))
     sock.listen(10)
-    t = threading.Thread(target=forever)
-    t.daemon = True
+    t = threading.Thread(target=get_cursor_on_connect)
     t.start()
     return sock, t
 
 
 if __name__ == '__main__':
     if sys.argv[1] == 'inner':
-        while True:
-            sys.stderr.write('>>> ')
-            sys.stderr.flush()
-            input()
-            s = socket.socket()
-            s.connect(('localhost', 1234))
-            b'done' == s.recv(1024)
-            assert b'' == s.recv(1024)
+        input('>>> ')
+        s = socket.socket()
+        s.connect(('localhost', 1234))
+        b'done' == s.recv(1024)
+        assert b'' == s.recv(1024)
+        sys.stderr.write('>>> ')
+        sys.stderr.flush()
+        input()
+
     elif sys.argv[1] == 'outer':
         set_up_listener()
         proc = pexpect.spawn(sys.executable, ['test.py', 'inner'],
