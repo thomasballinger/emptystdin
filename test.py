@@ -85,6 +85,5 @@ if __name__ == '__main__':
         raw_input()
     else:
         set_up_listener()
-        proc = pexpect.spawn(sys.executable, ['test.py', 'inner'],
-                             logfile=open('pexpect.log', 'w'))
+        proc = pexpect.spawn(sys.executable, ['test.py', 'inner'])
         proc.interact()
