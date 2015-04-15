@@ -59,7 +59,6 @@ if __name__ == '__main__':
         s = socket.socket()
         s.connect(('localhost', 1234))
         b'done' == s.recv(1024)
-        assert b'' == s.recv(1024)
         sys.stderr.write('>>> ')
         sys.stderr.flush()
         input()
