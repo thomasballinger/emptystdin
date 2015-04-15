@@ -10,7 +10,7 @@ pexpect subprocess
 process.interact()
                   \__________________________
                                              \
-                                              input('>>> ')
+                                              raw_input('>>> ')
                                               s.connect(server)
                       t = server.accept
                       t.send('done')
@@ -18,12 +18,11 @@ process.interact()
                                      +------->s.recv()
                                               sys.stderr.write('>>> ') ??????
                                               sys.stderr.flush()
-                                              input()
+                                              raw_input()
 
 the second '>>> ' doesn't appear onscreen until a key has been entered.
 I think this is because stdin is incorrectly being returned.
 """
-
 
 import re
 import socket
@@ -33,10 +32,6 @@ import termios
 import tty
 
 import pexpect
-
-if sys.version_info.major == 2:
-    input = raw_input
-    ConnectionRefusedError = socket.error
 
 
 def get_cursor_position(to_terminal, from_terminal):
@@ -74,21 +69,20 @@ def set_up_listener():
     sock = socket.socket()
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind(('localhost', 1234))
-    sock.listen(10)
+    sock.listen(1)
     t = threading.Thread(target=get_cursor_on_connect)
     t.start()
-    return sock, t
 
 
 if __name__ == '__main__':
     if len(sys.argv) == 2 and sys.argv[1] == 'inner':
-        input('>>> ')
+        raw_input('>>> ')
         s = socket.socket()
         s.connect(('localhost', 1234))
         b'done' == s.recv(1024)
         sys.stderr.write('>>> ')
         sys.stderr.flush()
-        input()
+        raw_input()
     else:
         set_up_listener()
         proc = pexpect.spawn(sys.executable, ['test.py', 'inner'],
