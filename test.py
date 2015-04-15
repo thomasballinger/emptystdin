@@ -6,10 +6,8 @@ import socket
 import sys
 import threading
 
-import pity
+import pexpect
 from termhelpers import Cbreak
-
-logging.basicConfig(filename='debug.log', level=logging.DEBUG)
 
 if sys.version_info.major == 2:
     input = raw_input
@@ -90,13 +88,13 @@ def set_up_listener():
     return sock, t
 
 
-def master_read(fd):
-    data = os.read(fd, 1)
+def master_read(data):
     logger.debug("read byte %r written to master device" % (data, ))
     return data
 
 if __name__ == '__main__':
     if sys.argv[1] == 'inner':
+        logging.basicConfig(filename='debug-outer.log', level=logging.DEBUG)
         logger = logging.getLogger('inner')
         logger.debug('\n\nnew session')
         while True:
@@ -108,8 +106,9 @@ if __name__ == '__main__':
             logger.debug('got input')
             connect_and_wait_for_close()
     elif sys.argv[1] == 'outer':
+        logging.basicConfig(filename='debug-inner.log', level=logging.DEBUG)
         logger = logging.getLogger('outer')
         set_up_listener()
-        pity.spawn(['python', 'test.py', 'inner'],
-                   master_read=master_read,
-                   handle_window_size=True)
+        proc = pexpect.spawn(sys.executable, ['test.py', 'inner'],
+                             logfile=open('pexpect.log', 'w'))
+        proc.interact(output_filter=master_read)
