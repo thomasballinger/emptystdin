@@ -1,3 +1,30 @@
+r"""
+outer                                         inner
+
+starts thread
+             \_______
+                     \
+                      listen()
+
+pexpect subprocess
+process.interact()
+                  \__________________________
+                                             \
+                                              input('>>> ')
+                                              s.connect(server)
+                      t = server.accept
+                      t.send('done')
+                                    \
+                                     +------->s.recv()
+                                              sys.stderr.write('>>> ') ??????
+                                              sys.stderr.flush()
+                                              input()
+
+the second '>>> ' doesn't appear onscreen until a key has been entered.
+I think this is because stdin is incorrectly being returned.
+"""
+
+
 import re
 import socket
 import sys
