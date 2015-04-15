@@ -54,7 +54,7 @@ def set_up_listener():
 
 
 if __name__ == '__main__':
-    if sys.argv[1] == 'inner':
+    if len(sys.argv) == 2 and sys.argv[1] == 'inner':
         input('>>> ')
         s = socket.socket()
         s.connect(('localhost', 1234))
@@ -63,8 +63,7 @@ if __name__ == '__main__':
         sys.stderr.write('>>> ')
         sys.stderr.flush()
         input()
-
-    elif sys.argv[1] == 'outer':
+    else:
         set_up_listener()
         proc = pexpect.spawn(sys.executable, ['test.py', 'inner'],
                              logfile=open('pexpect.log', 'w'))
