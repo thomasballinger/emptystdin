@@ -24,7 +24,6 @@ the second '>>> ' doesn't appear onscreen until a key has been entered.
 I think this is because stdin is incorrectly being returned.
 """
 
-import re
 import socket
 import sys
 import threading
@@ -42,19 +41,9 @@ def get_cursor_position(to_terminal, from_terminal):
         to_terminal.write(query_cursor_position)
         to_terminal.flush()
 
-        resp = ''
         while True:
-            c = from_terminal.read(1)
-            resp += c
-            m = re.search('(?P<extra>.*)'
-                          '(?P<CSI>\x1b\[|\x9b)'
-                          '(?P<row>\\d+);(?P<column>\\d+)R', resp, re.DOTALL)
-            if m:
-                row = int(m.groupdict()['row'])
-                col = int(m.groupdict()['column'])
-                extra = m.groupdict()['extra']
-                assert not extra
-                return (row - 1, col - 1)
+            if from_terminal.read(1) == 'R':
+                return
     finally:
         termios.tcsetattr(from_terminal, termios.TCSANOW, original_stty)
 
