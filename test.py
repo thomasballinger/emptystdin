@@ -1,26 +1,28 @@
 r"""
 outer                                             inner
 
-starts thread
-             \_______
+start thread
+            \________
                      \
-                      listen()
+                      server.listen()
 
-pexpect subprocess
-process.interact()
-                  \______________________________
+pexpect.spawn(inner)
+.interact()
+           \_____________________________________
                                                  \
                                                   s.connect(server)
-                      t = server.accept
+                      t = server.accept()
                       t.send('done')
                                     \
                                      +----------->s.recv()
                                                   sys.stderr.write('>>> ') ???
                                                   sys.stderr.flush()
-                                                  raw_input()
+                                                  time.sleep()
+                                                  # Why hasn't >>> been dispayed yet?
 
-the second '>>> ' doesn't appear onscreen until a key has been entered.
-I think this is because stdin is incorrectly being returned.
+The second '>>> ' doesn't appear onscreen until a key has been entered.
+I think this is because stdin is incorrectly being returned from select
+as ready to read, so we're mid blocking sys.stdin.read() call.
 """
 
 import socket
@@ -39,7 +41,6 @@ def get_cursor_position(to_terminal, from_terminal):
         query_cursor_position = "\x1b[6n"
         to_terminal.write(query_cursor_position)
         to_terminal.flush()
-
         while from_terminal.read(1) != 'R':
             pass
     finally:
